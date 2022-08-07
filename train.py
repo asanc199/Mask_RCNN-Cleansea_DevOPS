@@ -36,15 +36,12 @@ def process(args):
     if not os.path.exists(MODEL_DIR):
         os.makedirs(MODEL_DIR)
 
-
     # Ruta al archivo de pesos
     COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
 
     # Descargamos los Pesos Entrenados de COCO
     if not os.path.exists(COCO_WEIGHTS_PATH):
         utils.download_trained_weights(COCO_WEIGHTS_PATH)
-
-
 
     config = CleanSeaConfig()
     config.display()
@@ -169,8 +166,6 @@ def process(args):
             APs.append(AP)
             
         print("mAP ({}): {:.2f}%".format(MODEL_NAME, 100*np.mean(APs)))
-
-
 
 if __name__ == '__main__':
     # Parameters:
