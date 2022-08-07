@@ -55,6 +55,7 @@ jupyterlab-widgets==1.0.2
 keras==2.7.0
 keras-preprocessing==1.1.2
 kiwisolver==1.3.2
+labelme==4.5.7
 libclang==12.0.0
 markdown==3.3.6
 markupsafe==2.0.1

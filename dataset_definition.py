@@ -61,8 +61,6 @@ def encodeLabels(labels, nlabels):
     Y = le.transform(nlabels)
 
     #Mostramos los labels codificados
-    print(Y)
-    print(nlabels)
     return Y
 
 def train_test_split(img_names,Y):
@@ -96,8 +94,6 @@ def train_test_split(img_names,Y):
     #Transformamos en listas ambas arrays para evitar imagenes duplicadas en las carpetas
     X_train= list(dict.fromkeys(X_train))
     X_test= list(dict.fromkeys(X_test))
-    print(X_train)
-    print(X_test)
 
     #Copiamos las imagenes especificas a la carpeta train
     for f in X_train:
@@ -111,9 +107,7 @@ def train_test_split(img_names,Y):
                     full_jpegname= IMG_PATH + jpegname
                     if full_jpegname == f:
                         full_json_name= JSON_PATH + file_name
-                        print("Moving TRAIN JSON FILE...",full_json_name,"\n")
                         shutil.copy(full_json_name,TRAIN_PATH)
-            print("Moving TRAIN JPG FILE...",f,"\n")
             shutil.copy(f,TRAIN_PATH)
 
 
@@ -129,10 +123,8 @@ def train_test_split(img_names,Y):
                     full_jpegname= IMG_PATH + jpegname
                     if full_jpegname == f:
                         full_json_name= JSON_PATH + file_name
-                        print("Moving TEST JSON FILE...",full_json_name,"\n")
                         shutil.copy(full_json_name,TEST_PATH)
             shutil.copy(f,TEST_PATH)
-            print("Moving TEST JPG FILE...",f,"\n")
 
 def main():
     img_names,labels,nlabels = extractLabels()
