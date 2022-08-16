@@ -3,9 +3,13 @@ __pycache__
 *.py[cod]
 *$py.class
 .vscode
+*.pyc
 
 # C extensions
 *.so
+
+# Deep Learning
+*.h5
 
 # Distribution / packaging
 .Python

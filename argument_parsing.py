@@ -2,7 +2,7 @@ import argparse
 
 
 
-PRETRAIN_OPTIONS = ['coco', 'imagenet']
+PRETRAIN_OPTIONS = ['coco', 'imagenet', 'last']
 AUGMENTATION_OPTIONS = ['none', 'mild', 'severe']
 
 

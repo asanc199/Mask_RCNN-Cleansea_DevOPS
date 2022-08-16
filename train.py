@@ -50,7 +50,7 @@ def process(args):
     # Training dataset.
     dataset_train = CleanSeaDataset()
     print("Configuracion para train cargada\n")
-    dataset_train.load_data("./CocoFormatDataset", "train_coco", size_perc = args.size_perc)
+    dataset_train.load_data("../synthetic_dataset", "train_coco", size_perc = args.size_perc)
     print("Dataset Inicializado Correctamente\n")
     dataset_train.prepare()
     print("Preparacion del Dataset Completada\n")
@@ -62,7 +62,7 @@ def process(args):
     # Validation dataset
     dataset_test = CleanSeaDataset()
     print("Configuracion para test cargada\n")
-    dataset_test.load_data("./CocoFormatDataset", "test_coco")
+    dataset_test.load_data("../synthetic_dataset", "test_coco")
     print("Dataset Inicializado Correctamente\n")
     dataset_test.prepare()
     print("Preparacion del Dataset Completada\n")
@@ -87,12 +87,12 @@ def process(args):
         # Load weights trained on MS COCO, but skip layers that  are different due to the different number of classes See README for instructions to download the COCO weights
         model.load_weights(COCO_WEIGHTS_PATH, by_name=True, exclude=["mrcnn_class_logits", "mrcnn_bbox_fc", "mrcnn_bbox", "mrcnn_mask"])
 
-    # elif args.pretrain == "last":
-    #     # Load the last model you trained and continue training
-    #     model.load_weights(model.find_last(), by_name=True)
+    elif args.pretrain == "last":
+        # Load the last model you trained and continue training
+        model.load_weights(model.find_last(), by_name=True)
 
-    #     last_path="./logs/mask_rcnn_debris_weights1000DA5Heads.h5"
-    #     model.load_weights(last_path, by_name=True)
+        #last_path="./logs/mask_rcnn_debris_weights1000DA5Heads.h5"
+        #model.load_weights(last_path, by_name=True)
 
 
     ############################################################
@@ -122,7 +122,7 @@ def process(args):
         model.train(dataset_train, dataset_test, learning_rate = config.LEARNING_RATE / 10, epochs = epoch_break_point, layers = "all", augmentation = seq)
 
         # Output name:
-        MODEL_NAME = "Mask_RCNN_Epoch-{}_Aug-{}_Size-{}.h5".format(epoch_break_point, args.augmentation, args.size_perc)
+        MODEL_NAME = "mask_rcnn_Epoch-{}_Aug-{}_Size-{}.h5".format(epoch_break_point, args.augmentation, args.size_perc)
 
         # Save weights
         print("Saving weights in {}...\n".format(os.path.join(MODEL_DIR, MODEL_NAME)))
