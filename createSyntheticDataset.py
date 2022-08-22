@@ -23,6 +23,7 @@ ROT = True
 SCALE = True
 TRANS = True
 TRY = 3
+OVERLAP = 40
 
 AUG_PATH = "../synthetic_dataset"
 
@@ -173,16 +174,41 @@ def pasteBinPNG(bg, patch, pos = [0,0]):
     patchBGR = cv2.cvtColor(patchBW, cv2.COLOR_GRAY2BGR)
     imgMaskFull = np.zeros((hb,wb,db), np.uint8)
     imgMaskFull[pos[1]:hp + pos[1], pos[0]:wp + pos[0],:] = patchBGR
-    cv2.imshow("maskfull",imgMaskFull)
-    cv2.waitKey(0)
+    #cv2.imshow("maskfull",imgMaskFull)
+    #cv2.waitKey(0)
     # Make a copy to avoid overwritting
     bg_copy = bg
-    cv2.imshow("bg",bg)
-    cv2.waitKey(0)
+    (th,bgBW) = cv2.threshold(bg_copy,0,255,cv2.THRESH_BINARY)
+    (th,maskBW) = cv2.threshold(imgMaskFull,0,255,cv2.THRESH_BINARY)
+    bg_overlap = cv2.bitwise_and(bgBW,maskBW)
+    #cv2.imshow("Intersection",bg_overlap)
+    #cv2.waitKey(0)
+
+    #cv2.imshow("maskBW",maskBW)
+    #cv2.waitKey(0)
+
     bg_copy = bg_copy + imgMaskFull
-    cv2.imshow("Sum",bg_copy)
-    cv2.waitKey(0)
-    return bg_copy
+    #cv2.imshow("Sum",bg_copy)
+    #cv2.waitKey(0)
+    pxl_white, obj_white, area = 0,0,0.0
+    for x in range(bg_overlap.shape[0]):
+        for y in range(bg_overlap.shape[1]):
+            b, g, r = bg_overlap[x, y]
+            if (b, g, r) == (255,255,255):
+                pxl_white +=1
+    
+    for x in range(maskBW.shape[0]):
+        for y in range(maskBW.shape[1]):
+            b, g, r = maskBW[x, y]
+            if (b, g, r) == (255,255,255):
+                obj_white +=1
+
+    if pxl_white != 0:
+        print(f"Number of white intersection: {pxl_white}")
+        print(f"Number of white obj: {obj_white}")
+        area = round(pxl_white / obj_white, 5)*100
+        print(f"Area: {area}")
+    return bg_copy,area
 
 #------------------------------------------------------------------------------
 def patch_img(bg_bin,background, patch,check = False):
@@ -227,8 +253,8 @@ def patch_img(bg_bin,background, patch,check = False):
         else: x,y = 0,0
 
         if check:
-            bin_seg = pasteBinPNG(bg_bin, p, [x,y])
-            paste = checkOverlap(bg_bin,bin_seg)
+            bin_seg,area = pasteBinPNG(bg_bin, p, [x,y])
+            paste = checkOverlap(bg_bin,bin_seg,area)
             if paste: 
                 bg_bin = bin_seg
                 break
@@ -264,7 +290,6 @@ def create_new_dataset(bg_dataset, objects_dataset):
     n=0
     # Iterate through bg images
     for bg_idx in tqdm((bg_objs), "Creating Dataset"):
-        print(f"BG INDEX: {bg_idx}")
         bg = bgs[bg_idx]
         nimg_name = f"image_{n}" + ".jpg"
 
@@ -278,7 +303,6 @@ def create_new_dataset(bg_dataset, objects_dataset):
             h,w,d = bg.shape
             if i == 0 : bin_bg = np.zeros((h,w,d), np.uint8)
             
-
             bin_bg,bg,rotation,x,y,rs,patched = patch_img(bin_bg,bg, img_obj,True)
             if not patched:
                 continue
@@ -292,27 +316,18 @@ def create_new_dataset(bg_dataset, objects_dataset):
         n +=1
 
 #------------------------------------------------------------------------------
-def checkOverlap(bin_img,obj_bin_bg):
+def checkOverlap(bin_img,obj_bin_bg,area):
     overlap = bin_img + obj_bin_bg
     cv2.imwrite("clean_bg.png",bin_img)
     cv2.imwrite("with_obj_bg.png", obj_bin_bg)
     cv2.imwrite("overlap.png", overlap)
     
-    cv2.imshow("Overlap",overlap)
-    cv2.waitKey(0)
+    #cv2.imshow("Overlap",overlap)
+    #cv2.waitKey(0)
     
-    overlapGRAY = cv2.cvtColor(overlap, cv2.COLOR_BGR2GRAY)
-    (thresh, overlapBW) = cv2.threshold(overlapGRAY, 127, 255, cv2.THRESH_BINARY)
-    contours,hierachy = cv2.findContours(overlapBW,1,2)
-    cnt = contours[0]
-    print(len(contours))
-    area = cv2.contourArea(cnt)
-    
-    h,w,d = bin_img.shape
-    total_area = h*w
-    overlap_ptg = (area/total_area)
-    print("Overlap percentage: ", overlap_ptg)
-    if overlap_ptg < 50:
+    print("Area:", area)
+    if area < OVERLAP:
+        print("Paste Successfull")
         return True
     else:
         return False
@@ -407,7 +422,9 @@ if __name__ == "__main__":
     MASK_DATASET = "../cleansea_dataset/Dataset/Objetos"
     BG_DATASET = "../cleansea_dataset/Dataset/Backgrounds"
 
+    OVERLAP = int(input("Introduce percentage of overlapping allowed:\n"))
+    TRY = int(input("Introduce number of attempts for pasting objects:\n"))
     create_new_dataset(BG_DATASET,MASK_DATASET)
     #create_dataset(BG_DATASET, MASK_DATASET)
-    #checkMasks()
+    checkMasks()
 
