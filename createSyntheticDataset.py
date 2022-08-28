@@ -25,7 +25,7 @@ TRANS = True
 TRY = 3
 OVERLAP = 40
 
-AUG_PATH = "../synthetic_dataset"
+AUG_PATH = "synthetic_data"
 
 #------------------------------------------------------------------------------
 def rotate(xy, angle, origin=(0,0)):
@@ -57,6 +57,11 @@ def patch_json(name,json_path,angle,x,y,rs,patch,new_img,path_to_new_img):
     p_w = float(patch.shape[1])
     assert p_h == data["imageHeight"]
     assert p_w == data["imageWidth"]
+
+    # Adding these fields to the object images that do not have it:
+    if 'line_color' not in data['shapes'][0].keys(): data['shapes'][0]['line_color'] = None
+    if 'fill_color' not in data['shapes'][0].keys(): data['shapes'][0]['fill_color'] = None
+
 
     dsp_pts = []
     i=0
@@ -130,12 +135,13 @@ def patch_json(name,json_path,angle,x,y,rs,patch,new_img,path_to_new_img):
                 new_data[field] = f_data
     
     json_name = name.replace(".jpg",".json")
-    if not os.path.exists(os.path.join(AUG_PATH,"labels",json_name)):
-        json.dump(new_data,open(os.path.join(AUG_PATH,"labels",json_name),"w"),indent=2,separators=(", ",": "),sort_keys=False)
+    dst_label_path = 'labels'
+    if not os.path.exists(os.path.join(AUG_PATH,dst_label_path,json_name)):
+        json.dump(new_data,open(os.path.join(AUG_PATH,dst_label_path,json_name),"w"),indent=2,separators=(", ",": "),sort_keys=False)
     else:
-        update_data = json.load(open(os.path.join(AUG_PATH,"labels",json_name)))
+        update_data = json.load(open(os.path.join(AUG_PATH,dst_label_path,json_name)))
         update_data["shapes"].append(shp)
-        json.dump(update_data,open(os.path.join(AUG_PATH,"labels",json_name),"w"),indent=2,separators=(", ",": "),sort_keys=False)
+        json.dump(update_data,open(os.path.join(AUG_PATH,dst_label_path,json_name),"w"),indent=2,separators=(", ",": "),sort_keys=False)
 
 #------------------------------------------------------------------------------
 def pastePNG(bg, patch, pos = [0,0]):
@@ -165,104 +171,112 @@ def pastePNG(bg, patch, pos = [0,0]):
     return bg_copy
 
 #------------------------------------------------------------------------------
-def pasteBinPNG(bg, patch, pos = [0,0]):
+def pasteBinPNG(bg, patch, idx_obj, pos = [0,0]):
+    # Dimensions of the background and patch to be inserted:
     hp, wp, dp = patch.shape
-    hb, wb, db= bg.shape
+    hb, wb, db = bg.shape
     
-    patchGray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY)	
-    (thresh, patchBW) = cv2.threshold(patchGray, 0, 255, cv2.THRESH_BINARY)
-    patchBGR = cv2.cvtColor(patchBW, cv2.COLOR_GRAY2BGR)
+    # Creating mask image with the size of the background to include the new patch:
     imgMaskFull = np.zeros((hb,wb,db), np.uint8)
-    imgMaskFull[pos[1]:hp + pos[1], pos[0]:wp + pos[0],:] = patchBGR
-    #cv2.imshow("maskfull",imgMaskFull)
-    #cv2.waitKey(0)
-    # Make a copy to avoid overwritting
-    bg_copy = bg
-    (th,bgBW) = cv2.threshold(bg_copy,0,255,cv2.THRESH_BINARY)
-    (th,maskBW) = cv2.threshold(imgMaskFull,0,255,cv2.THRESH_BINARY)
-    bg_overlap = cv2.bitwise_and(bgBW,maskBW)
-    #cv2.imshow("Intersection",bg_overlap)
-    #cv2.waitKey(0)
 
-    #cv2.imshow("maskBW",maskBW)
-    #cv2.waitKey(0)
-
-    bg_copy = bg_copy + imgMaskFull
-    #cv2.imshow("Sum",bg_copy)
-    #cv2.waitKey(0)
-    pxl_white, obj_white, area = 0,0,0.0
-    for x in range(bg_overlap.shape[0]):
-        for y in range(bg_overlap.shape[1]):
-            b, g, r = bg_overlap[x, y]
-            if (b, g, r) == (255,255,255):
-                pxl_white +=1
+    # Binarizing current patch:
+    patchGray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY)	
+    _, patchBW = cv2.threshold(patchGray, 0, 1, cv2.THRESH_BINARY)
+    patchBW *= idx_obj
+    patchBGR = cv2.cvtColor(patchBW, cv2.COLOR_GRAY2BGR)
     
-    for x in range(maskBW.shape[0]):
-        for y in range(maskBW.shape[1]):
-            b, g, r = maskBW[x, y]
-            if (b, g, r) == (255,255,255):
-                obj_white +=1
+    # Inserting the patch in the empty background image:
+    imgMaskFull[pos[1]:hp + pos[1], pos[0]:wp + pos[0],:] = patchBGR
+    _, imgMaskFull_fs = cv2.threshold(imgMaskFull, 0, 255, cv2.THRESH_BINARY)
 
-    if pxl_white != 0:
-        print(f"Number of white intersection: {pxl_white}")
-        print(f"Number of white obj: {obj_white}")
-        area = round(pxl_white / obj_white, 5)*100
-        print(f"Area: {area}")
-    return bg_copy,area
+    # Make a copy to avoid overwritting:
+    bg_copy = bg.copy()
+
+
+    # Overlapping area per object in the image (excluding background, indexed as 0):
+    object_areas = dict()
+    for it_object in np.delete(np.unique(bg_copy), 0):
+        area_existing_object = np.count_nonzero(bg_copy == it_object)/3
+        overlapping_area = np.count_nonzero(cv2.bitwise_and((bg_copy == it_object).astype(np.uint8)*255, imgMaskFull_fs))/3
+        object_areas[it_object] = 100 * overlapping_area / area_existing_object
+        
+    # Including the mask of the new object in the overall mask image:
+    bg_copy = bg_copy + imgMaskFull
+    _, bg_copy = cv2.threshold(bg_copy, idx_obj, idx_obj, cv2.THRESH_TRUNC)
+
+    return bg_copy, object_areas
+
+
+
 
 #------------------------------------------------------------------------------
-def patch_img(bg_bin,background, patch,check = False):
+def patch_img(bg_bin, background, patch, idx_obj):
     """
     Creates a synthetic using a background image an a png image as a patch
     """
-    p= patch
-    p_h, p_w, _ = p.shape
+
+    paste = False
+    
+    # Background dimesions:
     h, w, d = background.shape
-    #print(p.shape)
-    paste = True
+
+    # Iterating through the number of attempts:
     for i in range(TRY):
-        if ROT:             #Apply random rotation and store it
+        print("\t- Attempt #{}".format(i))
+
+        # Processing patch from in each attempt:
+        p = patch.copy()
+        p_h, p_w, _ = p.shape # Patch
+        
+
+        # Random rotation:
+        if ROT:             
             # random.seed(1)
             angle = randrange(360)
-            print(f"Applying rotation of {angle}")
+            print(f"\t\t - Applying rotation of {angle}")
             p = ndimage.rotate(p, angle)
-        else: angle = 0
+        else:
+            angle = 0
 
-        if SCALE:               #Norm Rotated mask
+        # Norm Rotated mask:
+        if SCALE:               
             while True:
                 # random.seed(1)
                 rs = 1
-                if max(h,w)/max(p_h,p_w) < 1: rs = max(h,w)/max(p_h,p_w)
+                if min(h,w)/max(p_h,p_w) < 1: rs = min(h,w)/max(p_h,p_w) ######
                 rs *= float( randrange(25,50) ) / 100.0
                 p = cv2.resize(p,(0,0),None,fx=rs,fy=rs,interpolation=cv2.INTER_AREA)
                 p_h, p_w, _ = p.shape
-                print(f"Applying resize: {rs}")
+                print(f"\t\t - Applying resize: {rs}")
                 if p_h < h and p_w < w:
                     break
                     
-        else: rs = 1.0
+        else:
+            rs = 1.0
 
-        if TRANS:               #Posicion en X/Y
+        # Traslation (X/Y):
+        if TRANS:               
             p_h, p_w, _ = p.shape
             # random.seed(1)
             x = randrange(w - p_w)
             # random.seed(1)
             y = randrange(h - p_h)
-            print(f"Applying paste in location:{x,y}")
+            print(f"\t\t - Applying paste in location:{x,y}")
 
-        else: x,y = 0,0
+        else:
+            x,y = 0,0
 
-        if check:
-            bin_seg,area = pasteBinPNG(bg_bin, p, [x,y])
-            paste = checkOverlap(bg_bin,bin_seg,area)
-            if paste: 
-                bg_bin = bin_seg
-                break
+        # Checking pasting feasibility:
+        bin_seg, object_areas = pasteBinPNG(bg_bin, p, idx_obj, [x,y])
+        if checkOverlap(bg_bin,bin_seg, object_areas): 
+            bg_bin = bin_seg
+            paste = True
+            break
 
-    if paste:
-        seg = pastePNG(background, p, [x,y])
-        return bin_seg,seg,angle,x,y,rs,True
-    else: return _,_,_,_,_,_,False
+    if paste: background = pastePNG(background, p, [x,y])
+
+    return bg_bin, background, angle, x, y, rs, paste
+
 
 #------------------------------------------------------------------------------
 def obj_selector(bg_dataset,objects_dataset):
@@ -286,51 +300,53 @@ def obj_selector(bg_dataset,objects_dataset):
 
 #------------------------------------------------------------------------------
 def create_new_dataset(bg_dataset, objects_dataset):
-    bgs,bg_objs = obj_selector(bg_dataset,objects_dataset)
-    n=0
+    bgs,bg_objs = obj_selector(bg_dataset, objects_dataset)
+
     # Iterate through bg images
     for bg_idx in tqdm((bg_objs), "Creating Dataset"):
+        print("")
         bg = bgs[bg_idx]
-        nimg_name = f"image_{n}" + ".jpg"
+        nimg_name = f"image_{bg_idx}" + ".jpg"
+
+        # Init target mask:
+        bin_bg = np.zeros(bg.shape, np.uint8)
 
         # Iterate through objects
-        i = 0
-        for objs in bg_objs[bg_idx]:
+        for idx_obj, objs in enumerate(bg_objs[bg_idx]):
             img_obj = objs[0]
             label = objs[1]
 
-            # 1. Calcular solape con n intentos
-            h,w,d = bg.shape
-            if i == 0 : bin_bg = np.zeros((h,w,d), np.uint8)
+            print("- Pasting {} object".format(label.split("/")[2]))
+
+            # Patch image pasting with N attempts::
+            bin_bg, bg, rotation, x, y, rs, patched = patch_img(bg_bin = bin_bg, background = bg, patch = img_obj, idx_obj = idx_obj + 1)
+
+            if patched: 
+                # Image:
+                cv2.imwrite(os.path.join(AUG_PATH, "images", nimg_name) ,bg)
+
+                # Annotation:
+                patch_json(nimg_name, label, rotation, x, y, rs, img_obj, bg, os.path.join(AUG_PATH, "images", nimg_name))
             
-            bin_bg,bg,rotation,x,y,rs,patched = patch_img(bin_bg,bg, img_obj,True)
-            if not patched:
-                continue
-            else:
-                cv2.imwrite(os.path.join(AUG_PATH,"images",nimg_name),bg)
-            
-            # 2. Crear json // Appendear al json (TODO)
-            patch_json(nimg_name,label,rotation,x,y,rs,img_obj,bg,os.path.join(AUG_PATH,"images",nimg_name))
-            i+=1
-        
-        n +=1
 
 #------------------------------------------------------------------------------
-def checkOverlap(bin_img,obj_bin_bg,area):
-    overlap = bin_img + obj_bin_bg
-    cv2.imwrite("clean_bg.png",bin_img)
-    cv2.imwrite("with_obj_bg.png", obj_bin_bg)
+def checkOverlap(bin_img, obj_bin_bg, object_areas):
+    # overlap = bin_img + obj_bin_bg
+    _, aux = cv2.threshold(obj_bin_bg, 0, 255, cv2.THRESH_BINARY)
+    overlap = bin_img + aux
     cv2.imwrite("overlap.png", overlap)
+    _, aux = cv2.threshold(bin_img, 0, 255, cv2.THRESH_BINARY)
+    cv2.imwrite("clean_bg.png", aux)
+    _, aux = cv2.threshold(obj_bin_bg, 0, 255, cv2.THRESH_BINARY)
+    cv2.imwrite("with_obj_bg.png", aux)
+
     
-    #cv2.imshow("Overlap",overlap)
-    #cv2.waitKey(0)
-    
-    print("Area:", area)
-    if area < OVERLAP:
-        print("Paste Successfull")
-        return True
-    else:
+    if (np.array(list(object_areas.values())) > OVERLAP).any():
+        print("\t --> Unsuccessful paste...")
         return False
+    else:
+        print("\t --> Paste Successful!!!")
+        return True    
 
 #------------------------------------------------------------------------------
 def create_dataset(bg_dataset, objects_dataset):
@@ -419,12 +435,21 @@ def checkMasks():
 #------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    MASK_DATASET = "../cleansea_dataset/Dataset/Objetos"
-    BG_DATASET = "../cleansea_dataset/Dataset/Backgrounds"
+    MASK_DATASET = "synthetic_data/Objetos"
+    BG_DATASET = "synthetic_data/Backgrounds"
 
-    OVERLAP = int(input("Introduce percentage of overlapping allowed:\n"))
-    TRY = int(input("Introduce number of attempts for pasting objects:\n"))
-    create_new_dataset(BG_DATASET,MASK_DATASET)
+    OVERLAP = 10 # int(input("Introduce percentage of overlapping allowed:\n"))
+    TRY = 2 # int(input("Introduce number of attempts for pasting objects:\n"))
+
+    dst_path = 'synthetic_data/images'
+    files = [u for u in os.listdir(dst_path) if os.path.isfile(os.path.join(dst_path, u))]
+    for u in files: os.remove(os.path.join(dst_path, u))
+
+    dst_path = 'synthetic_data/labels'
+    files = [u for u in os.listdir(dst_path) if os.path.isfile(os.path.join(dst_path, u))]
+    for u in files: os.remove(os.path.join(dst_path, u))
+
+    create_new_dataset(BG_DATASET, MASK_DATASET)
     #create_dataset(BG_DATASET, MASK_DATASET)
     checkMasks()
 
