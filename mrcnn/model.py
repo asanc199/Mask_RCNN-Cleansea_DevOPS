@@ -2267,7 +2267,7 @@ class MaskRCNN(object):
         self.checkpoint_path = self.checkpoint_path.replace(
             "*epoch*", "{epoch:04d}")
 
-    def train(self, train_dataset, val_dataset, learning_rate, epochs, layers,
+    def train(self, train_dataset, learning_rate, epochs, layers,
               augmentation=None, custom_callbacks=None, no_augmentation_sources=None):
         """Train the model.
         train_dataset, val_dataset: Training and validation Dataset objects.
@@ -2320,7 +2320,7 @@ class MaskRCNN(object):
         # Data generators
         # print("LEN: ", len(train_dataset.image_info))
         train_generator = DataGenerator(train_dataset, self.config, shuffle=True, augmentation=augmentation)
-        val_generator = DataGenerator(val_dataset, self.config, shuffle=True)
+        # val_generator = DataGenerator(val_dataset, self.config, shuffle=True)
 
         # print(type(train_generator))
         # print(train_generator.batch_size)
