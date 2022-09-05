@@ -116,8 +116,9 @@ class CleanSeaDataset(utils.Dataset):
 
             # Loading each image:
             print("\t\t - Loading synthetic images")
-            for image in coco_json['images'][:num_images]:
+            for image in coco_json['images']:
                 image_id = image['id']
+                
                 if image_id in seen_images:
                     print("Warning: Skipping duplicate image id: {}".format(image))
                 else:
