@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw
 #  Dataset
 ############################################################
 class CleanSeaDataset(utils.Dataset):
-    def load_data(self, dataset_dir, subset, size_perc = 100, filling_set = None):
+    def load_data(self, dataset_dir, subset, size_perc = 100, filling_set = 'none'):
         # Train or test partition:
         assert subset in ["train_coco", "test_coco"]
 
@@ -85,7 +85,7 @@ class CleanSeaDataset(utils.Dataset):
 
 
         # Including images from another corpus (synthetic, in our case) in addition to the real ones:
-        if filling_set != None:
+        if filling_set != 'none':
             # Maximum possible number of real images: 
             max_number_images = len(coco_json['images'])
 

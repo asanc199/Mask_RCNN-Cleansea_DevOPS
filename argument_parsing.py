@@ -8,6 +8,7 @@ PRETRAIN_OPTIONS = ['coco', 'imagenet', 'last']
 AUGMENTATION_OPTIONS = ['none', 'mild', 'severe']
 TRAIN_OPTIONS = ['real', 'synth']
 PROCESS_OPTIONS = ['train', 'inference', 'both']
+FILLING_OPTIONS = ['none', 'synth']
 
 """Arguments menu"""
 def menu():
@@ -17,7 +18,7 @@ def menu():
 	parser.add_argument('-train_db',	dest="train_db",                required = True,			help='Train data', choices = TRAIN_OPTIONS)
 	parser.add_argument('-test_db',     dest="test_db",					required = True,            help='Test data', choices = TRAIN_OPTIONS)
 	parser.add_argument('-process',		dest="process",					required = True,			help='Process to carry out', choices = PROCESS_OPTIONS)
-	parser.add_argument('-fill_db',		dest="fill_db",					required = False,			help='Filling data', type=str)
+	parser.add_argument('-fill_db',		dest="fill_db",					required = True,			help='Filling data', choices = FILLING_OPTIONS)
 	parser.add_argument('-aug',         dest="augmentation",            required = True,			help='Augmentation type', choices = AUGMENTATION_OPTIONS)
 	parser.add_argument('-size',        dest="size_perc",               required = False,			help='Train size percentage', default = 100, type = int)
 	parser.add_argument('-epochs',		dest='epochs',					required = True,			help='List for the epoch breaks', type=str, default = '50, 100')
