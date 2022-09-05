@@ -95,7 +95,8 @@ class CleanSeaDataset(utils.Dataset):
             print("\t - Including {} synthetic images".format(num_images))
 
             # Path to filling dataset:
-            filling_dataset_dir = os.path.join(filling_set, 'train_coco')
+            filling_set_name = 'SynthSet'
+            filling_dataset_dir = os.path.join(filling_set_name, 'train_coco')
 
             # Loading the JSON file:
             print("\t\t - Loading annotations")

@@ -23,10 +23,15 @@ from CleanSeaDataset import CleanSeaDataset
 # Import argument parsing:
 import argument_parsing
 
+
 """ Train process """
 def train_process(args):
     physical_devices = tf.config.list_physical_devices('GPU')
     os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
 
     # tf.config.experimental.set_memory_growth(physical_devices[0], True)
     # Directorio perteneciente a MASK-RCNN
@@ -131,6 +136,10 @@ def inference_process(args):
 
     physical_devices = tf.config.list_physical_devices('GPU')
     os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
 
     # Test partition:
     dataset_test = CleanSeaDataset()
