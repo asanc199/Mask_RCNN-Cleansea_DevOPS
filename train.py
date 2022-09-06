@@ -178,8 +178,10 @@ def inference_process(args):
 
         # Iterating through the different test images:
         image_ids = dataset_test.image_ids
-        APs = list()
-        Overlaps = list()
+        APs_025 = list()
+        APs_05 = list()
+        APs_075 = list()
+        AP_ranges = list()
         for image_id in image_ids:
             # Load image and ground truth data
             image, image_meta, gt_class_id, gt_bbox, gt_mask =\
@@ -191,12 +193,31 @@ def inference_process(args):
             r = results[0]
             
             # Compute AP
-            AP, precisions, recalls, overlap = utils.compute_ap(gt_bbox, gt_class_id, gt_mask, r["rois"], r["class_ids"], r["scores"], r['masks'])
-            APs.append(AP)
-            Overlaps.append(overlap)
+            # th = 0.5
+            AP_05, precisions, recalls, overlap = utils.compute_ap(gt_bbox, gt_class_id, gt_mask, r["rois"], r["class_ids"], r["scores"], r['masks'], 0.5)
+            APs_05.append(AP_05)
+
+            # th = 0.75
+            AP_075, precisions, recalls, overlap = utils.compute_ap(gt_bbox, gt_class_id, gt_mask, r["rois"], r["class_ids"], r["scores"], r['masks'], 0.75)
+            APs_075.append(AP_075)
+
+            # th = 0.25
+            AP_025, precisions, recalls, overlap = utils.compute_ap(gt_bbox, gt_class_id, gt_mask, r["rois"], r["class_ids"], r["scores"], r['masks'], 0.25)
+            APs_025.append(AP_025)
+
+
+            # COCO range
+            AP_range = utils.compute_ap_range(gt_box = gt_bbox, gt_class_id = gt_class_id, gt_mask = gt_mask,\
+                     pred_box = r["rois"], pred_class_id = r["class_ids"], pred_score = r["scores"], pred_mask = r['masks'],\
+                     iou_thresholds = None, verbose = 0)
+            AP_ranges.append(AP_range)
+
 
         print("--- Results --- ")    
-        print("\t - mAP ({}): {:.2f}%".format(MODEL_NAME, 100*np.mean(APs)))
+        print("\t - mAP-0.25 ({}): {:.2f}%".format(MODEL_NAME, 100*np.mean(APs_025)))
+        print("\t - mAP-0.5 ({}): {:.2f}%".format(MODEL_NAME, 100*np.mean(APs_05)))
+        print("\t - mAP-0.75 ({}): {:.2f}%".format(MODEL_NAME, 100*np.mean(APs_075)))
+        print("\t - mAP-Range ({}): {:.2f}%".format(MODEL_NAME, 100*np.mean(AP_ranges)))
     return
 
 
