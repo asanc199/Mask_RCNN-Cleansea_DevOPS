@@ -182,6 +182,7 @@ def inference_process(args):
         APs_05 = list()
         APs_075 = list()
         AP_ranges = list()
+        IoUs = list()
         for image_id in image_ids:
             # Load image and ground truth data
             image, image_meta, gt_class_id, gt_bbox, gt_mask =\
@@ -205,6 +206,8 @@ def inference_process(args):
             AP_025, precisions, recalls, overlap = utils.compute_ap(gt_bbox, gt_class_id, gt_mask, r["rois"], r["class_ids"], r["scores"], r['masks'], 0.25)
             APs_025.append(AP_025)
 
+            # AVG Intersection over Union:
+            IoUs.append(np.average(overlap))
 
             # COCO range
             AP_range = utils.compute_ap_range(gt_box = gt_bbox, gt_class_id = gt_class_id, gt_mask = gt_mask,\
@@ -214,10 +217,12 @@ def inference_process(args):
 
 
         print("--- Results --- ")    
+        print("\t - IoU ({}): {:.2f}".format(MODEL_NAME, np.nanmean(IoUs)))
+        print("\t - mAP-Range ({}): {:.2f}%".format(MODEL_NAME, 100*np.mean(AP_ranges)))
         print("\t - mAP-0.25 ({}): {:.2f}%".format(MODEL_NAME, 100*np.mean(APs_025)))
         print("\t - mAP-0.5 ({}): {:.2f}%".format(MODEL_NAME, 100*np.mean(APs_05)))
         print("\t - mAP-0.75 ({}): {:.2f}%".format(MODEL_NAME, 100*np.mean(APs_075)))
-        print("\t - mAP-Range ({}): {:.2f}%".format(MODEL_NAME, 100*np.mean(AP_ranges)))
+
     return
 
 
