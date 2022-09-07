@@ -131,7 +131,7 @@ class CleanSeaDataset(utils.Dataset):
                         print("Warning: Skipping image (id: {}) with missing key: {}".format(image_id, key))
                     
                     # Path to the selected image:
-                    image_path = os.path.join(dataset_dir, image_file_name)
+                    image_path = os.path.join(filling_dataset_dir, image_file_name)
 
                     # Annotation of the image:
                     image_annotations = annotations[image_id]
