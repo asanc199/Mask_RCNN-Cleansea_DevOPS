@@ -150,8 +150,8 @@ def train_process(args):
             epochs = epoch_break_point, layers = "all", augmentation = seq)
 
         # Output name:
-        MODEL_NAME = "Mask_RCNN_Epoch-{}_Aug-{}_Size-{}_Train-{}_Fill-{}.h5".format(epoch_break_point,\
-            args.augmentation, args.size_perc, args.train_db, args.fill_db)
+        MODEL_NAME = "Mask_RCNN_Epoch-{}_Aug-{}_Size-{}_Train-{}_Fill-{}_Limit-{}.h5".format(epoch_break_point,\
+            args.augmentation, args.size_perc, args.train_db, args.fill_db, args.limit_train)
 
         # Save weights
         print("\t -Saving weights in {}...\n".format(os.path.join(MODEL_DIR, MODEL_NAME)))
