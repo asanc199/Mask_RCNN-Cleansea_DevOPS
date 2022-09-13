@@ -1,5 +1,6 @@
 import os
 import json
+import random
 import numpy as np
 from mrcnn import utils
 from PIL import Image, ImageDraw
@@ -8,7 +9,7 @@ from PIL import Image, ImageDraw
 #  Dataset
 ############################################################
 class CleanSeaDataset(utils.Dataset):
-    def load_data(self, dataset_dir, subset, size_perc = 100, filling_set = 'none'):
+    def load_data(self, dataset_dir, subset, size_perc = 100, filling_set = 'none', limit_train = True):
         # Train or test partition:
         assert subset in ["train_coco", "test_coco"]
 
@@ -83,16 +84,8 @@ class CleanSeaDataset(utils.Dataset):
                 )
         print("\t\t - Done!")
 
-
         # Including images from another corpus (synthetic, in our case) in addition to the real ones:
         if filling_set != 'none':
-            # Maximum possible number of real images: 
-            max_number_images = len(coco_json['images'])
-
-            # Setting the number of additional images to use (gap between actual real ones and maximum real ones):
-            num_images = max_number_images - len(self.image_info)
-
-            print("\t - Including {} synthetic images".format(num_images))
 
             # Path to filling dataset:
             filling_set_name = 'SynthSet'
@@ -108,15 +101,29 @@ class CleanSeaDataset(utils.Dataset):
             annotations = {}
             print("\t\t - Storing annotations")
             for annotation in coco_json['annotations']:
+                annotation['image_id'] = 's_' + str(annotation['image_id'])
                 image_id = annotation['image_id']
                 if image_id not in annotations:
                     annotations[image_id] = []
                 annotations[image_id].append(annotation)
             print("\t\t\t - Done!")
 
+            if limit_train == True:
+                # Maximum possible number of real images: 
+                max_number_images = len(coco_json['images'])
+
+                # Setting the number of additional images to use (gap between actual real ones and maximum real ones):
+                num_images = max_number_images - len(self.image_info)
+
+            else:
+                num_images = len(annotations)
+            
+            print("\t - Including {} synthetic images".format(num_images))
+
             # Loading each image:
             print("\t\t - Loading synthetic images")
-            for image in coco_json['images']:
+            for image in coco_json['images'][:num_images]:
+                image['id'] = "s_" + str(image['id'])
                 image_id = image['id']
                 
                 if image_id in seen_images:
@@ -145,9 +152,11 @@ class CleanSeaDataset(utils.Dataset):
                         height=image_height,
                         annotations=image_annotations
                     )
+            random.shuffle(self.image_info)
             print("\t\t\t - Done!")
 
         return
+
 
     def load_mask(self, image_id):
         """ Carga la mascara de instancia para la imagen dada

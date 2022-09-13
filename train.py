@@ -92,7 +92,7 @@ def train_process(args):
 
     # Selecting either real or synthetic train data:
     if args.train_db == 'real':
-        dataset_train.load_data("./CocoFormatDataset", "train_coco", size_perc = args.size_perc, filling_set = args.fill_db)
+        dataset_train.load_data("./CocoFormatDataset", "train_coco", size_perc = args.size_perc, filling_set = args.fill_db, limit_train = args.limit_train)
     else:
         dataset_train.load_data("./SynthSet", "train_coco", size_perc = args.size_perc)
     print("\t- Done loading data!")
@@ -256,7 +256,6 @@ def inference_process(args):
 
 
             #### /MATERIAL-LEVEL EVALUATION\ ###
-
             # Grouping classes:
             gt_class_id_material = np.array([mapping_dictionary[str(u)] for u in gt_class_id], dtype=np.int32)
             class_ids_material = np.array([mapping_dictionary[str(u)] for u in r["class_ids"]],dtype=np.int32)
