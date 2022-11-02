@@ -9,7 +9,7 @@ from PIL import Image, ImageDraw
 #  Dataset
 ############################################################
 class CleanSeaDataset(utils.Dataset):
-    def load_data(self, dataset_dir, subset, size_perc = 100, filling_set = 'none', limit_train = True):
+    def load_data(self, dataset_dir, subset, size_perc = 100, fill_size_perc = 100, filling_set = 'none', limit_train = True):
         # Train or test partition:
         assert subset in ["train_coco", "test_coco"]
 
@@ -116,7 +116,7 @@ class CleanSeaDataset(utils.Dataset):
                 num_images = max_number_images - len(self.image_info)
 
             else:
-                num_images = len(annotations)
+                num_images = int(fill_size_perc*len(annotations)/100)
             
             print("\t - Including {} synthetic images".format(num_images))
 

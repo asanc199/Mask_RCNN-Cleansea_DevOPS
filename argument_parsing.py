@@ -22,11 +22,13 @@ def menu():
 	parser.add_argument('-fill_db',		dest="fill_db",					required = True,			help='Filling data', choices = FILLING_OPTIONS)
 	parser.add_argument('-aug',         dest="augmentation",            required = True,			help='Augmentation type', choices = AUGMENTATION_OPTIONS)
 	parser.add_argument('-size',        dest="size_perc",               required = False,			help='Train size percentage', default = 100, type = int)
+	parser.add_argument('-fill_size',   dest="fill_size_perc",          required = False,			help='Fill size percentage (only if -limit_train=false)', default = 100, type = int)
 	parser.add_argument('-epochs',		dest='epochs',					required = True,			help='List for the epoch breaks', type=str, default = '50, 100')
 	parser.add_argument('-limit_train',	dest='limit_train',				required = False,			help='Limit amount of train data', type=str_to_bool, nargs='?', const=True, default=True)
 
 	args = parser.parse_args()
 	args.epochs = [int(item) for item in args.epochs.split(',')]
+	args.fill_size_perc = args.fill_size_perc if args.limit_train == False else 100
 
 	return args
 

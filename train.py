@@ -92,7 +92,7 @@ def train_process(args):
 
     # Selecting either real or synthetic train data:
     if args.train_db == 'real':
-        dataset_train.load_data("./CocoFormatDataset", "train_coco", size_perc = args.size_perc, filling_set = args.fill_db, limit_train = args.limit_train)
+        dataset_train.load_data("./CocoFormatDataset", "train_coco", size_perc = args.size_perc, fill_size_perc = args.fill_size_perc, filling_set = args.fill_db, limit_train = args.limit_train)
     else:
         dataset_train.load_data("./SynthSet", "train_coco", size_perc = args.size_perc)
     print("\t- Done loading data!")
@@ -150,8 +150,8 @@ def train_process(args):
             epochs = epoch_break_point, layers = "all", augmentation = seq)
 
         # Output name:
-        MODEL_NAME = "Mask_RCNN_Epoch-{}_Aug-{}_Size-{}_Train-{}_Fill-{}_Limit-{}.h5".format(epoch_break_point,\
-            args.augmentation, args.size_perc, args.train_db, args.fill_db, args.limit_train)
+        MODEL_NAME = "Mask_RCNN_Epoch-{}_Aug-{}_Size-{}_Train-{}_Fill-{}_FillSize-{}_Limit-{}.h5".format(epoch_break_point,\
+            args.augmentation, args.size_perc, args.train_db, args.fill_db, args.fill_size_perc, args.limit_train)
 
         # Save weights
         print("\t -Saving weights in {}...\n".format(os.path.join(MODEL_DIR, MODEL_NAME)))
@@ -196,8 +196,9 @@ def inference_process(args):
 
     for epoch_break_point in args.epochs:
         # Retrieving model name:
-        MODEL_NAME = "Mask_RCNN_Epoch-{}_Aug-{}_Size-{}_Train-{}_Fill-{}_Limit-{}.h5".format(epoch_break_point, args.augmentation,\
-            args.size_perc, args.train_db, args.fill_db, args.limit_train)
+        MODEL_NAME = "Mask_RCNN_Epoch-{}_Aug-{}_Size-{}_Train-{}_Fill-{}_FillSize-{}_Limit-{}.h5".format(epoch_break_point,\
+            args.augmentation, args.size_perc, args.train_db, args.fill_db, args.fill_size_perc, args.limit_train)
+
 
         # Get path to saved weights
         model_path = os.path.join(MODEL_DIR, MODEL_NAME)
