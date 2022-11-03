@@ -101,6 +101,22 @@ def train_process(args):
     dataset_train.prepare()
     print("\t- Done preparing train data!")
 
+
+    # Test partition:
+    dataset_test = CleanSeaDataset()
+    print("\n--- Test configuration ---")
+    if args.test_db == 'real':
+        dataset_test.load_data("./CocoFormatDataset", "test_coco")
+    else:
+        dataset_test.load_data("./SynthSet", "test_coco")
+
+    print("\t- Done loading data")
+    dataset_test.prepare()
+    print("\t- Done preparing test data!")
+
+
+
+
     # # Load and display random samples
     # print("Mostrando Imagenes aleatorias...\n")
 
@@ -109,6 +125,10 @@ def train_process(args):
     #     image = dataset_train.load_image(image_id)
     #     mask, class_ids = dataset_train.load_mask(image_id)
     #     visualize.display_top_masks(image, mask, class_ids, dataset_train.class_names)
+
+
+
+
 
     # Instantiating a model (new):
     print("Initializing train model...\n")
@@ -136,8 +156,8 @@ def train_process(args):
     # layers. You can also pass a regular expression to select
     # which layers to train by name pattern.
     print("Training Heads (first stage)...")
-    model.train(dataset_train, learning_rate = config.LEARNING_RATE,\
-        epochs = 5, layers = 'heads', augmentation = seq)
+    model.train(train_dataset = dataset_train, val_dataset = dataset_test, learning_rate = config.LEARNING_RATE,\
+        epochs = 5, layers = 'heads', augmentation = seq, validation_bool = args.val_bool)
     print("\t - Done!")
 
     # Fine tune all layers
@@ -146,8 +166,8 @@ def train_process(args):
     # train by name pattern.
     for epoch_break_point in args.epochs:
         print("Training network (second stage)...")
-        model.train(train_dataset = dataset_train, learning_rate = config.LEARNING_RATE / 10,\
-            epochs = epoch_break_point, layers = "all", augmentation = seq)
+        model.train(train_dataset = dataset_train, val_dataset = dataset_test, learning_rate = config.LEARNING_RATE / 10,\
+            epochs = epoch_break_point, layers = "all", augmentation = seq, validation_bool = args.val_bool)
 
         # Output name:
         MODEL_NAME = "Mask_RCNN_Epoch-{}_Aug-{}_Size-{}_Train-{}_Fill-{}_FillSize-{}_Limit-{}.h5".format(epoch_break_point,\

@@ -25,6 +25,7 @@ def menu():
 	parser.add_argument('-fill_size',   dest="fill_size_perc",          required = False,			help='Fill size percentage (only if -limit_train=false)', default = 100, type = int)
 	parser.add_argument('-epochs',		dest='epochs',					required = True,			help='List for the epoch breaks', type=str, default = '50, 100')
 	parser.add_argument('-limit_train',	dest='limit_train',				required = False,			help='Limit amount of train data', type=str_to_bool, nargs='?', const=True, default=True)
+	parser.add_argument('-val_bool',	dest='val_bool',				required = False,			help='Whether to use validation data or not', type=str_to_bool, nargs='?', const=True, default=False)
 
 	args = parser.parse_args()
 	args.epochs = [int(item) for item in args.epochs.split(',')]
