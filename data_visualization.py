@@ -13,12 +13,11 @@ import cv2
 AUG_PATH = "../data_augmented/"
 N_AUG = 1
 
-IMG_DATASET = "D:/Cleansea/cleansea_dataset/Dataset/DebrisImages"
-LABELS_DATASET = "D:/Cleansea/cleansea_dataset/Dataset/Annotations"
+IMG_DATASET = "D:/Cleansea/cleansea_dataset/Dataset/images"
+LABELS_DATASET = "D:/Cleansea/cleansea_dataset/Dataset/labels"
 
 LABELS = ["background","Can","Squared_Can","Wood","Bottle","Plastic_Bag","Glove","Fishing_Net","Tire","Packaging_Bag","WashingMachine","Metal_Chain","Rope","Towel","Plastic_Debris","Metal_Debris","Pipe","Shoe","Car_Bumper","Basket"]
 COLOR_CODE = [(255,0,0),(0,255,0),(0,0,255),(255,155,0),(255,155,155),(155,255,0),(155,255,155),(155,0,255),(155,155,255),(255,255,0),(0,255,255),(255,0,255)]
-# COLOR_CODE = [(255,0,0),(255,0,0),(255,0,0),(255,0,0),(255,0,0),(255,0,0),(255,0,0),(255,0,0),(255,0,0),(255,0,0),(255,0,0),(255,0,0)]
 
 import random
 
@@ -26,6 +25,10 @@ def main():
     data_augment()
 
 def data_augment():
+    """
+    Applies data augmentation to the images defined in the ``IMG_DATASET`` variable. 
+    It also generates newly images with the original image and the augmented image side by side
+    """
     if not os.path.exists(AUG_PATH):
         os.mkdir(AUG_PATH)
     for img_p in tqdm(os.listdir(IMG_DATASET)):
@@ -35,34 +38,39 @@ def data_augment():
                 while(times<N_AUG):
                     s_time = time.time()
                     image = cv2.resize(image, dsize=(512, 512))
-                    #print(mask.shape)
                     mask = cv2.resize(mask, dsize=(512, 512)).astype(np.uint8)
                     augmenter = obtain_augmenter(image.shape,mask)
-                    #print(image.shape)
-                    #print(mask.shape)
                     images_aug, segmaps_aug = augmenter(image=image, segmentation_maps=SegmentationMapsOnImage(mask, shape=image.shape))
                     e_time = time.time()
-                    #print("generate")
-                    #print(e_time-s_time)
                     s_time = time.time()
                     grid_image = draw_result(image, SegmentationMapsOnImage(mask, shape=image.shape), images_aug,segmaps_aug)
                     if not os.path.exists(AUG_PATH):
                         os.mkdir(AUG_PATH)
                     imageio.imwrite(os.path.join(AUG_PATH,img_p.replace(".jpg",f"_{times}.jpg")), grid_image)
                     e_time = time.time()
-                    #print("save")
-                    #print(e_time-s_time)
                     times+=1
 
 def load_image_label(img_p,labels_path= LABELS_DATASET):
+    """
+    Loads image and the label linked to it. The image must be in them ``images`` folder and the respective label must be in the ``labels`` folder.
+
+    Parameters
+    ----------
+    img_p: Mat
+        Path to image
+
+    labels_path: string
+        Path to the labels folder
+
+    """
+    imgs_path = labels_path.replace("labels","images")
     ann_path = img_p.replace(".jpg",".json")
     annotation = os.path.join(labels_path, ann_path)
     data = load_json(annotation)
-    #print(data['shapes'][0])
     labels = (data['shapes'])
 
     if len(labels) > 0:
-        img_orig = cv2.cvtColor(cv2.imread(os.path.join(labels_path,img_p)), cv2.COLOR_BGR2RGB)
+        img_orig = cv2.cvtColor(cv2.imread(os.path.join(imgs_path,img_p)), cv2.COLOR_BGR2RGB)
 
         shape_mask = np.zeros((img_orig.shape[0], img_orig.shape[1]) + (max(1, 1),)).astype(np.uint8)
         shape_mask_aux = np.zeros((img_orig.shape[0], img_orig.shape[1]))
@@ -75,7 +83,6 @@ def load_image_label(img_p,labels_path= LABELS_DATASET):
         return None, None
 
 def load_mask(label, shape_mask):
-
     data = load_json(label)
     shapes= data['shapes']
     for shape in shapes:
@@ -83,6 +90,13 @@ def load_mask(label, shape_mask):
     return shape_mask
 
 def load_json(json_path):
+    """Load JSON
+
+    Parameters
+    ----------
+    json_path: string
+        Path of the json file
+    """
     # load label file
     with open(json_path) as f:
         label = f.read()
@@ -90,7 +104,9 @@ def load_json(json_path):
     return json.loads(label)
 
 def obtain_augmenter(shape, mask):
-    
+    """
+    Gets an augmenter
+    """
     seq = iaa.Sequential([
         iaa.Fliplr(0.5), # horizontal flips
         # Small gaussian blur with random sigma between 0 and 0.5.
@@ -123,6 +139,21 @@ def obtain_augmenter(shape, mask):
     return seq
     
 def draw_result(image, segmap, image_aug,segmap_aug):
+    """
+    Draws results for the performed augmentation.
+    
+    Parameters
+    ----------
+    image: Mat
+        Original image
+    segmap: SegmentationMapsOnImage
+        Segmentation map
+    image_aug: Mat
+        Augmented image
+    segmap_aug: SegmentationMapsOnImage
+        Auxiliar segmentation map
+    
+    """
     cells = []
     cells.append(image)                # column 1
     #cells.append(image_aug)                                     # column 2

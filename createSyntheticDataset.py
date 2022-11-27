@@ -25,7 +25,7 @@ TRANS = True
 TRY = 3
 OVERLAP = 40
 
-AUG_PATH = "synthetic_data"
+AUG_PATH = "../synthetic_dataset"
 
 #------------------------------------------------------------------------------
 def rotate(xy, angle, origin=(0,0)):
@@ -147,6 +147,17 @@ def patch_json(name,json_path,angle,x,y,rs,patch,new_img,path_to_new_img):
 def pastePNG(bg, patch, pos = [0,0]):
     """
     Pastes a png image in a specific point of a background image
+
+    Parameters
+    -----------
+    bg: numpy array
+        Background image
+    
+    patch: numpy array
+        Object image used as patch
+
+    pos: array of ints
+        Array that represents XY pixel coordinates where to paste the patch
     """
     hp, wp, cp = patch.shape
     hb, wb, cb = bg.shape
@@ -172,6 +183,24 @@ def pastePNG(bg, patch, pos = [0,0]):
 
 #------------------------------------------------------------------------------
 def pasteBinPNG(bg, patch, idx_obj, pos = [0,0]):
+    """
+    Pastes binary png image on top of bg image
+
+    Parameters
+    -----------
+    bg: numpy array
+        Binary background image
+    
+    patch: numpy array
+        Object image used as patch
+
+    idx_obj: int
+        Identifier for patch iteration (number of objects pasted)
+    
+    pos: array of ints
+        Array that represents XY pixel coordinates where to paste the patch
+    """
+
     # Dimensions of the background and patch to be inserted:
     hp, wp, dp = patch.shape
     hb, wb, db = bg.shape
@@ -206,13 +235,25 @@ def pasteBinPNG(bg, patch, idx_obj, pos = [0,0]):
 
     return bg_copy, object_areas
 
-
-
-
 #------------------------------------------------------------------------------
 def patch_img(bg_bin, background, patch, idx_obj):
     """
-    Creates a synthetic using a background image an a png image as a patch
+    Creates a synthetic image using a background image an a object image as a patch
+
+    Parameters
+    -----------
+
+    bg_bin: numpy array
+        Blank image used as background template
+
+    background: numpy array
+        Image used as background
+
+    patch: numpy array
+        Image of object used as a patch
+    
+    idx_obj: int
+        Identifier for the actual pasting iteration
     """
 
     paste = False
@@ -277,9 +318,11 @@ def patch_img(bg_bin, background, patch, idx_obj):
 
     return bg_bin, background, angle, x, y, rs, paste
 
-
 #------------------------------------------------------------------------------
 def obj_selector(bg_dataset,objects_dataset):
+    """
+    Selects random number of objects for each image contained in the bg_dataset
+    """
     objects, labels = obj_dataloader(objects_dataset)
     bgs = bg_dataloader(bg_dataset)
     n = 0
@@ -300,6 +343,17 @@ def obj_selector(bg_dataset,objects_dataset):
 
 #------------------------------------------------------------------------------
 def create_new_dataset(bg_dataset, objects_dataset):
+    """
+    Creates a synthetic dataset using background images and previously labeled objects
+
+    Parameters
+    -----------
+    bg_dataset: String
+        Gets the path to the background images.
+
+    objects_dataset: String
+        Gets the path to the objects that are going to be used to generate the new dataset.
+    """
     bgs,bg_objs = obj_selector(bg_dataset, objects_dataset)
 
     # Iterate through bg images
@@ -328,9 +382,11 @@ def create_new_dataset(bg_dataset, objects_dataset):
                 # Annotation:
                 patch_json(nimg_name, label, rotation, x, y, rs, img_obj, bg, os.path.join(AUG_PATH, "images", nimg_name))
             
-
 #------------------------------------------------------------------------------
 def checkOverlap(bin_img, obj_bin_bg, object_areas):
+    """
+    Check overlap percentage between previously pasted objects and the new one
+    """
     # overlap = bin_img + obj_bin_bg
     _, aux = cv2.threshold(obj_bin_bg, 0, 255, cv2.THRESH_BINARY)
     overlap = bin_img + aux
@@ -351,7 +407,7 @@ def checkOverlap(bin_img, obj_bin_bg, object_areas):
 #------------------------------------------------------------------------------
 def create_dataset(bg_dataset, objects_dataset):
     """
-    Creates a synthetic dataset using background images and previously labeled objects
+    (DEPRECATED) Creates a synthetic dataset using background images and previously labeled objects
     """
     if not os.path.exists(os.path.join(AUG_PATH,"images")):
         os.makedirs(os.path.join(AUG_PATH,"images"))
@@ -417,39 +473,64 @@ def bg_dataloader(dataset):
 
 #------------------------------------------------------------------------------
 def checkMasks():
-    for img_p in tqdm(os.listdir(AUG_PATH)):
+    """
+    Draws the new generated masks on top of the new generated images
+    """
+    for img_p in tqdm(os.listdir(os.path.join(AUG_PATH,"images"))):
         if img_p.endswith(".jpg"):
-            image, mask = data_visualization.load_image_label(img_p, AUG_PATH)
+            image, mask = data_visualization.load_image_label(img_p, os.path.join(AUG_PATH,"labels"))
             augmenter = data_visualization.obtain_augmenter(image.shape,mask)
-            #print(image.shape)
-            #print(mask.shape)
             images_aug, segmaps_aug = augmenter(image=image, segmentation_maps=SegmentationMapsOnImage(mask, shape=image.shape))
-            #print("generate")
-            #print(e_time-s_time)
             grid_image = data_visualization.draw_result(image, SegmentationMapsOnImage(mask, shape=image.shape), images_aug,segmaps_aug)
             if not os.path.exists(os.path.join(AUG_PATH,"Visualization")):
                 os.makedirs(os.path.join(AUG_PATH,"Visualization"))
             imageio.imwrite(os.path.join(AUG_PATH,"Visualization",img_p.replace(".jpg",f"_mask.jpg")), grid_image)
-            #cv2.imshow("Mask",grid_image)
-            #cv2.waitKey(0)
 #------------------------------------------------------------------------------
 
+def createSyntheticDataset(mask_dataset,bg_dataset):
+    """
+    Creates synthetic dataset from mask and background images
+
+    Parameters
+    ----------
+    mask_dataset: String
+        Gets the path where the mask dataset is stored.
+
+    bg_dataset: String
+        Gets the path where the background images dataset is stored.
+    """
+    OVERLAP = 10 # int(input("Introduce percentage of overlapping allowed:\n"))
+    TRY = 2 # int(input("Introduce number of attempts for pasting objects:\n"))
+
+    dst_path = '../synthetic_dataset/images'
+    if not os.path.exists(dst_path): os.makedirs(dst_path)
+    files = [u for u in os.listdir(dst_path) if os.path.isfile(os.path.join(dst_path, u))]
+    for u in files: os.remove(os.path.join(dst_path, u))
+
+    dst_path = '../synthetic_dataset/labels'
+    if not os.path.exists(dst_path): os.makedirs(dst_path)
+    files = [u for u in os.listdir(dst_path) if os.path.isfile(os.path.join(dst_path, u))]
+    for u in files: os.remove(os.path.join(dst_path, u))
+
+    create_new_dataset(bg_dataset, mask_dataset)
+    checkMasks()
+
 if __name__ == "__main__":
-    MASK_DATASET = "synthetic_data/Objetos"
-    BG_DATASET = "synthetic_data/Backgrounds"
+    MASK_DATASET = "../synthetic_dataset/src/Objetos"
+    BG_DATASET = "../synthetic_dataset/src/Backgrounds"
 
     OVERLAP = 10 # int(input("Introduce percentage of overlapping allowed:\n"))
     TRY = 2 # int(input("Introduce number of attempts for pasting objects:\n"))
 
-    dst_path = 'synthetic_data/images'
-    files = [u for u in os.listdir(dst_path) if os.path.isfile(os.path.join(dst_path, u))]
-    for u in files: os.remove(os.path.join(dst_path, u))
+    dst_path = '../synthetic_dataset/images'
+    if not os.path.exists(dst_path): os.makedirs(dst_path)
+    #files = [u for u in os.listdir(dst_path) if os.path.isfile(os.path.join(dst_path, u))]
+    #for u in files: os.remove(os.path.join(dst_path, u))
 
-    dst_path = 'synthetic_data/labels'
-    files = [u for u in os.listdir(dst_path) if os.path.isfile(os.path.join(dst_path, u))]
-    for u in files: os.remove(os.path.join(dst_path, u))
+    dst_path = '../synthetic_dataset/labels'
+    if not os.path.exists(dst_path): os.makedirs(dst_path)
+    #files = [u for u in os.listdir(dst_path) if os.path.isfile(os.path.join(dst_path, u))]
+    #for u in files: os.remove(os.path.join(dst_path, u))
 
-    create_new_dataset(BG_DATASET, MASK_DATASET)
-    #create_dataset(BG_DATASET, MASK_DATASET)
+    #create_new_dataset(BG_DATASET, MASK_DATASET)
     checkMasks()
-

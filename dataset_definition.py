@@ -11,6 +11,7 @@ import shutil
 from sklearn.model_selection import StratifiedKFold
 from sklearn import preprocessing
 from PIL import Image
+from tqdm import tqdm
 
 IMG_PATH = "../synthetic_dataset/images/"
 JSON_PATH = "../synthetic_dataset/labels/"
@@ -19,6 +20,9 @@ TRAIN_PATH = "../synthetic_dataset/train"
 TEST_PATH = "../synthetic_dataset/test" 
 
 def extractLabels(img_path=IMG_PATH,json_path=JSON_PATH):
+    '''
+    Extracts the labels from the labels folder and linked images
+    '''
     #Realizamos una lectura de todos los json y extraemos el toppic 'labels' para almacenarla en una variable con todos los labels de todas las imagenes.
     nlabels=[]
     img_names= []
@@ -41,14 +45,14 @@ def extractLabels(img_path=IMG_PATH,json_path=JSON_PATH):
                         nlabels.append(label)
 
     #Mostramos todos los labels e imagenes que hemos analizado
-    print('Stored Labels:', nlabels)
-    print('Images Names:', img_names)
-
     labels=np.array(nlabels)
     img_names=np.array(img_names)
     return img_names,labels,nlabels
 
 def encodeLabels(labels, nlabels):
+    '''
+    Enconde the labels within the available labels
+    '''
     labels, count = np.unique(nlabels, return_counts=True)
     #Los mostramos
     for idx, l in enumerate(labels):
@@ -64,6 +68,9 @@ def encodeLabels(labels, nlabels):
     return Y
 
 def train_test_split(img_names,Y):
+    '''
+    Se realiza la separación de train y test 
+    '''
     #Realizamos una division de los datos en 1/5
     skf = StratifiedKFold(n_splits=5)
     train_index, test_index = next( skf.split(img_names, Y) )
@@ -71,10 +78,6 @@ def train_test_split(img_names,Y):
     #Almacenamos las imagenes segun donde van a ser movidas
     X_train, X_test = img_names[train_index], img_names[test_index]
     Y_train, Y_test = Y[train_index], Y[test_index]
-
-    #Mostramos las imagenes y la carpeta de destino
-    print("Images to be moved to Train Folder: \n", X_train)
-    print("\n Images to be moved to Test Folder: \n", X_test)
 
     #Creamos las carpetas para train y test
     try:
@@ -96,8 +99,8 @@ def train_test_split(img_names,Y):
     X_test= list(dict.fromkeys(X_test))
 
     #Copiamos las imagenes especificas a la carpeta train
-    for f in X_train:
-        if os.path.isfile(f):
+    for f in tqdm(range(len(X_train))):
+        if os.path.isfile(X_train[f]):
             #Recorremos el folder donde se almacenan los .json
             for file_name in [file for file in os.listdir(JSON_PATH)]:
                 with open(JSON_PATH + file_name) as json_file:
@@ -105,15 +108,15 @@ def train_test_split(img_names,Y):
                     #Almacenamos con que imagen va relacionado
                     jpegname= content['imagePath']
                     full_jpegname= IMG_PATH + jpegname
-                    if full_jpegname == f:
+                    if full_jpegname == X_train[f]:
                         full_json_name= JSON_PATH + file_name
                         shutil.copy(full_json_name,TRAIN_PATH)
-            shutil.copy(f,TRAIN_PATH)
+            shutil.copy(X_train[f],TRAIN_PATH)
 
 
     #Y a la carpeta test
-    for f in X_test:
-        if (os.path.isfile(f)):
+    for f in tqdm(range(len(X_test))):
+        if (os.path.isfile(X_test[f])):
             #Recorremos el folder donde se almacenan los .json
             for file_name in [file for file in os.listdir(JSON_PATH)]:
                 with open(JSON_PATH + file_name) as json_file:
@@ -121,14 +124,21 @@ def train_test_split(img_names,Y):
                     #Almacenamos con que imagen va relacionado
                     jpegname= content['imagePath']
                     full_jpegname= IMG_PATH + jpegname
-                    if full_jpegname == f:
+                    if full_jpegname == X_test[f]:
                         full_json_name= JSON_PATH + file_name
                         shutil.copy(full_json_name,TEST_PATH)
-            shutil.copy(f,TEST_PATH)
+            shutil.copy(X_test[f],TEST_PATH)
 
-def main():
-    img_names,labels,nlabels = extractLabels()
+def dataset_definition(img_path = IMG_PATH, json_path=JSON_PATH):
+    '''
+    Extracts the labels, encodes them and does the train-test split using stratified k folds but only using the first set
+    '''
+    img_names,labels,nlabels = extractLabels(img_path,json_path)
     encoded_labes = encodeLabels(labels,nlabels)
     train_test_split(img_names,encoded_labes)
+
+def main():
+    dataset_definition()
+
 if __name__ == "__main__":
     main()
