@@ -2268,7 +2268,7 @@ class MaskRCNN(object):
             "*epoch*", "{epoch:04d}")
 
     def train(self, train_dataset, val_dataset, learning_rate, epochs, layers,
-              augmentation=None, custom_callbacks=None, no_augmentation_sources=None):
+              augmentation=None, custom_callbacks=None, no_augmentation_sources=None, validation_bool = False):
         """Train the model.
         train_dataset, val_dataset: Training and validation Dataset objects.
         learning_rate: The learning rate to train with
@@ -2354,19 +2354,34 @@ class MaskRCNN(object):
         else:
             workers = multiprocessing.cpu_count()
 
-        self.keras_model.fit(
-            train_generator,
-            initial_epoch = self.epoch,
-            epochs = epochs,
-            steps_per_epoch = train_generator.__len__(), #self.config.STEPS_PER_EPOCH,
-            callbacks = callbacks,
-            # validation_data = val_generator,
-            # validation_steps = val_generator.__len__(), #self.config.VALIDATION_STEPS,
-            max_queue_size = 100,
-            workers = 0,
-            use_multiprocessing = workers > 1,
-            verbose = 2,
-        )
+        if validation_bool == True:
+            self.keras_model.fit(
+                train_generator,
+                initial_epoch = self.epoch,
+                epochs = epochs,
+                steps_per_epoch = train_generator.__len__(), #self.config.STEPS_PER_EPOCH,
+                callbacks = callbacks,
+                validation_data = val_generator,
+                validation_steps = val_generator.__len__(), #self.config.VALIDATION_STEPS,
+                max_queue_size = 100,
+                workers = 0,
+                use_multiprocessing = workers > 1,
+                verbose = 2,
+            )
+        else:
+            self.keras_model.fit(
+                train_generator,
+                initial_epoch = self.epoch,
+                epochs = epochs,
+                steps_per_epoch = train_generator.__len__(), #self.config.STEPS_PER_EPOCH,
+                callbacks = callbacks,
+                # validation_data = val_generator,
+                # validation_steps = val_generator.__len__(), #self.config.VALIDATION_STEPS,
+                max_queue_size = 100,
+                workers = 0,
+                use_multiprocessing = workers > 1,
+                verbose = 2,
+            )
         self.epoch = max(self.epoch, epochs)
 
     def mold_inputs(self, images):

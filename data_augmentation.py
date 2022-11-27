@@ -4,6 +4,9 @@ from imgaug import augmenters as iaa
 # Aumentado de Datos - Severe
 # ===============================================================================
 def createSevereDataAugmentation():
+    """
+    Creates a sequential augmenter for Servere data augmentation
+    """
     seq = iaa.Sequential([
         iaa.Fliplr(0.5), # horizontal flips
         # Small gaussian blur with random sigma between 0 and 0.5.
@@ -41,6 +44,9 @@ def createSevereDataAugmentation():
 # Aumentado de Datos - Mild
 # ===============================================================================
 def createMildDataAugmentation():
+    """
+    Creates a sequential augmenter for Mild data augmentation
+    """
     seq = iaa.Sequential([
         iaa.Fliplr(0.5), # horizontal flips
         iaa.Affine(

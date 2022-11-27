@@ -15,7 +15,7 @@ class CleanSeaConfig(Config):
 
     # We use a GPU with 12GB memory, which can fit two images.
     # Adjust down if you use a smaller GPU.
-    IMAGES_PER_GPU = 2
+    IMAGES_PER_GPU = 4
 
     # Use small images for faster training. Set the limits of the small side
     # the large side, and that determines the image shape.
